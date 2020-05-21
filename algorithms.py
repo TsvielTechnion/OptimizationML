@@ -96,8 +96,12 @@ class NonSmoothPGD(GradientDecent):
     def is_stopping_criteria(self):
         fx = self.f_avg_history[-1]
         f_next_x = self.calculate_mean()
-        should_stop = True if fx - f_next_x <= self.epsilon else False
-        return should_stop
+
+        if fx - f_next_x <= self.epsilon:
+            # The relevant history is of the AVG
+            self.history[FX] = self.f_avg_history
+            return True
+        return False
 
     def calculate_mean(self):
         x_avg = np.mean(self.history[X], axis=0)
