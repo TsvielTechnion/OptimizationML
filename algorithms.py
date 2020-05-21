@@ -159,3 +159,48 @@ class AcceleratedGD(GradientDecent):
         self.y = next_y
 
         return next_x
+
+
+class SmoothAcceleratedGD(GradientDecent):
+    """
+    For Strongly convex
+    """
+    def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, beta: float):
+        self.beta = beta
+        self.y = x_1
+        self.prev_lambda = 0
+        self.current_lambda = self.compute_lambda(self.prev_lambda)
+        self.next_lambda = self.compute_lambda(self.current_lambda)
+        super().__init__(A, b, x_1, epsilon)
+
+    def step_size(self):
+        return 1/self.beta
+
+    def compute_next_x(self, x):
+        gradient = self.first_order_oracle(x)
+        next_y = x - self.step_size() * gradient
+
+        gamma = self.compute_gamma()
+        next_x = (1-gamma)*next_y + gamma*self.y
+        self.y = next_y
+
+        return next_x
+
+    def compute_gamma(self):
+        """
+        Compute value of gamma in current iteration by: gamma_t = (1-lambda_t)/lambda_t+1
+        """
+        return (1-self.current_lambda)/self.next_lambda
+
+    def compute_lambda(self, prev_lambda):
+        """
+        Compute the value of lambda in current iteration by: (1+sqrt(1+4*prev_lambda^2))/2
+        :param prev_lambda:
+        :return:
+        """
+        return 0.5*(1+np.sqrt(1+4*prev_lambda**2))
+
+    def update_lambda(self):
+        self.prev_lambda = self.current_lambda
+        self.current_lambda = self.next_lambda
+        self.next_lambda = self.compute_lambda(self.current_lambda)
