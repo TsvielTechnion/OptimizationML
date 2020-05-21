@@ -24,7 +24,8 @@ class GradientDecent:
         self.history[FX].append(f_x_2)
 
     def run(self):
-        while not self.is_stopping_criteria():
+        # while not self.is_stopping_criteria():
+        for i in range(1000):
             next_x = self.compute_next_x(self.last_x)
             f_next_x = self.zero_order_oracle(next_x)
             self.history[X].append(next_x)
@@ -163,7 +164,7 @@ class AcceleratedGD(GradientDecent):
 
 class SmoothAcceleratedGD(GradientDecent):
     """
-    For Strongly convex
+    For Smooth and Non Strongly convex
     """
     def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, beta: float):
         self.beta = beta
@@ -174,15 +175,17 @@ class SmoothAcceleratedGD(GradientDecent):
         super().__init__(A, b, x_1, epsilon)
 
     def step_size(self):
-        return 1/self.beta
+        return 1 / self.beta
 
     def compute_next_x(self, x):
         gradient = self.first_order_oracle(x)
-        next_y = x - self.step_size() * gradient
+        next_y = x - (self.step_size() * gradient)
 
         gamma = self.compute_gamma()
-        next_x = (1-gamma)*next_y + gamma*self.y
+        next_x = (1 - gamma) * next_y + gamma * self.y
+
         self.y = next_y
+        self.update_lambda()
 
         return next_x
 
@@ -190,7 +193,7 @@ class SmoothAcceleratedGD(GradientDecent):
         """
         Compute value of gamma in current iteration by: gamma_t = (1-lambda_t)/lambda_t+1
         """
-        return (1-self.current_lambda)/self.next_lambda
+        return (1 - self.current_lambda) / self.next_lambda
 
     def compute_lambda(self, prev_lambda):
         """
@@ -198,7 +201,7 @@ class SmoothAcceleratedGD(GradientDecent):
         :param prev_lambda:
         :return:
         """
-        return 0.5*(1+np.sqrt(1+4*prev_lambda**2))
+        return 0.5 * (1 + np.sqrt(1 + 4 * prev_lambda ** 2))
 
     def update_lambda(self):
         self.prev_lambda = self.current_lambda
