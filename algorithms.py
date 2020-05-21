@@ -1,6 +1,5 @@
 import numpy as np
 from abc import abstractmethod
-from copy import deepcopy
 
 
 X = "x"
@@ -27,7 +26,7 @@ class GradientDecent:
             self.history[X].append(next_x)
             self.history[FX].append(f_next_x)
 
-        return next_x, f_next_x, self.history
+        return self.history
 
     def zero_order_oracle(self, x):
         """
@@ -74,6 +73,7 @@ class NonSmoothPGD(GradientDecent):
         self.R = R
         self.A_sigma_max = A_sigma_max
         self.L = self.calculate_lipschitz()
+        self.f_avg_history = [self.zero_order_oracle(x_1)]
 
     def calculate_lipschitz(self):
         """
@@ -93,15 +93,16 @@ class NonSmoothPGD(GradientDecent):
         return next_x
 
     def is_stopping_criteria(self):
-        x_values_t_minus_1 = self.history[X][:-1]
-        x_values_t_minus_1_avg = np.mean(x_values_t_minus_1)
-        x_values_avg = np.mean(self.history[X])
-
-        fx = self.zero_order_oracle(x_values_t_minus_1_avg)
-        f_next_x = self.zero_order_oracle(x_values_avg)
-
+        fx = self.f_avg_history[-1]
+        f_next_x = self.calculate_mean()
         should_stop = True if f_next_x - fx <= self.epsilon else False
         return should_stop
+
+    def calculate_mean(self):
+        x_avg = np.mean(self.history[X])
+        f_x_avg = self.zero_order_oracle(x_avg)
+        self.f_avg_history.append(f_x_avg)
+        return f_x_avg
 
     def calculate_projection(self, x):
         """
