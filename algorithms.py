@@ -13,11 +13,15 @@ class GradientDecent:
         self.x_1 = x_1
         self.epsilon = epsilon  # stopping condition
 
-        x_2 = self.compute_next_x(x_1)
         self.history = {
-                        X: [x_1, x_2],
-                        FX: [self.zero_order_oracle(x_1), self.zero_order_oracle(x_2)]
+                        X: [x_1],
+                        FX: [self.zero_order_oracle(x_1)]
                     }  # [[x values], [fx values]]
+
+        x_2 = self.compute_next_x(x_1)
+        f_x_2 = self.zero_order_oracle(x_2)
+        self.history[X].append(x_2)
+        self.history[FX].append(f_x_2)
 
     def run(self):
         while not self.is_stopping_criteria():
@@ -47,7 +51,7 @@ class GradientDecent:
 
     def is_stopping_criteria(self):
         fx, f_next_x = self.history[FX][-2:]
-        should_stop = True if f_next_x - fx <= self.epsilon else False
+        should_stop = True if fx - f_next_x <= self.epsilon else False
         return should_stop
 
     @abstractmethod
@@ -58,10 +62,6 @@ class GradientDecent:
     def compute_next_x(self, *args):
         ...
 
-    @abstractmethod
-    def is_stopping_criteria(self):
-        ...
-
     @property
     def last_x(self):
         return self.history[X][-1]
@@ -69,18 +69,19 @@ class GradientDecent:
 
 class NonSmoothPGD(GradientDecent):
     def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, R:float, A_sigma_max: float):
-        super().__init__(A, b, x_1, epsilon)
         self.R = R
         self.A_sigma_max = A_sigma_max
+        self.b = b
         self.L = self.calculate_lipschitz()
+        super().__init__(A, b, x_1, epsilon)
         self.f_avg_history = [self.zero_order_oracle(x_1)]
 
     def calculate_lipschitz(self):
         """
         Calculate L-Lipschitz parameter of LR function by: sigma_max(A)^2*R + sigma_max(A)*||b||
         """
-        first_summand = self.A_sigma_max**2 * self.R
-        second_summand = self.A_sigma_max*np.linalg.norm(self.b, ord=2)
+        first_summand = self.A_sigma_max ** 2 * self.R
+        second_summand = self.A_sigma_max * np.linalg.norm(self.b, ord=2)
         return first_summand + second_summand
 
     def step_size(self, t):
@@ -95,11 +96,11 @@ class NonSmoothPGD(GradientDecent):
     def is_stopping_criteria(self):
         fx = self.f_avg_history[-1]
         f_next_x = self.calculate_mean()
-        should_stop = True if f_next_x - fx <= self.epsilon else False
+        should_stop = True if fx - f_next_x <= self.epsilon else False
         return should_stop
 
     def calculate_mean(self):
-        x_avg = np.mean(self.history[X])
+        x_avg = np.mean(self.history[X], axis=0)
         f_x_avg = self.zero_order_oracle(x_avg)
         self.f_avg_history.append(f_x_avg)
         return f_x_avg
@@ -115,8 +116,8 @@ class NonSmoothPGD(GradientDecent):
 
 class SmoothGD(GradientDecent):
     def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, beta: float):
-        super().__init__(A, b, x_1, epsilon)
         self.beta = beta
+        super().__init__(A, b, x_1, epsilon)
 
     def step_size(self):
         return 1/self.beta
@@ -131,12 +132,12 @@ class AcceleratedGD(GradientDecent):
     """
     For Strongly convex
     """
-    def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, alpha: float, beta: float):
-        super().__init__(A, b, x_1, epsilon)
+    def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, beta: float, alpha: float):
         self.alpha = alpha
         self.beta = beta
         self.k = self.beta / self.alpha
         self.y = x_1
+        super().__init__(A, b, x_1, epsilon)
 
     def step_size(self):
         return 1/self.beta
