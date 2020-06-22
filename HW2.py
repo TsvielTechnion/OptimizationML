@@ -36,16 +36,15 @@ dfs_svgr = []
 
 wa = pd.DataFrame()
 
-for i in range(1):
+for i in range(2):
     sgd = SGD(A, b, x_1, epsilon, R, A_sigma_min)
     sgd_result = sgd.run(2000)
     sgd_result['iterations'] = [i for i in range(len(sgd_result['x']))]
     df_sgd = pd.DataFrame(sgd_result)
     df_sgd["algorithm"] = "SGD"
-    # df_sgd["f_weighted_average"] = sgd.weighted_avg(sgd_result['x'])
     sdg_wa = pd.DataFrame(data=sgd.weighted_avg(sgd_result['x']), columns=["SGD"])
     wa = pd.concat([wa, sdg_wa], axis=1)
-    # dfs_sgd.append(df_sgd)
+    dfs_sgd.append(df_sgd)
 
     bs=5
     mb_sgd_5 = MiniBatchSGD(A, b, x_1, epsilon, R, A_sigma_min, A_sigma_max, bs)
@@ -53,7 +52,6 @@ for i in range(1):
     mb_sgd_5_result['iterations'] = [i for i in range(len(mb_sgd_5_result['x']))]
     df_mb_sgd_5 = pd.DataFrame(mb_sgd_5_result)
     df_mb_sgd_5["algorithm"] = "MB_SGD_5"
-    df_mb_sgd_5["f_weighted_average"] = mb_sgd_5.weighted_avg(mb_sgd_5_result['x'])
     mb_sgd_5_wa = pd.DataFrame(data=mb_sgd_5.weighted_avg(mb_sgd_5_result['x']), columns=["MiniBatchSGD_5"])
     wa = pd.concat([wa, mb_sgd_5_wa], axis=1)
     dfs_mb_sgd_5.append(df_mb_sgd_5)
@@ -64,7 +62,6 @@ for i in range(1):
     mb_sgd_10_result['iterations'] = [i for i in range(len(mb_sgd_10_result['x']))]
     df_mb_sgd_10 = pd.DataFrame(mb_sgd_10_result)
     df_mb_sgd_10["algorithm"] = "MB_SGD_10"
-    df_mb_sgd_10["f_weighted_average"] = mb_sgd_10.weighted_avg(mb_sgd_10_result['x'])
     mb_sgd_10_wa = pd.DataFrame(data=mb_sgd_10.weighted_avg(mb_sgd_10_result['x']), columns=["MiniBatchSGD_10"])
     wa = pd.concat([wa, mb_sgd_10_wa], axis=1)
     dfs_mb_sgd_10.append(df_mb_sgd_10)
@@ -75,7 +72,6 @@ for i in range(1):
     mb_sgd_20_result['iterations'] = [i for i in range(len(mb_sgd_20_result['x']))]
     df_mb_sgd_20 = pd.DataFrame(mb_sgd_20_result)
     df_mb_sgd_20["algorithm"] = "MB_SGD_20"
-    df_mb_sgd_20["f_weighted_average"] = mb_sgd_20.weighted_avg(mb_sgd_20_result['x'])
     mb_sgd_20_wa = pd.DataFrame(data=mb_sgd_20.weighted_avg(mb_sgd_20_result['x']), columns=["MiniBatchSGD_20"])
     wa = pd.concat([wa, mb_sgd_20_wa], axis=1)
     dfs_mb_sgd_20.append(df_mb_sgd_20)
@@ -118,6 +114,6 @@ sb.lineplot(x=results['iterations'],
             )
 plt.show()
 
-wa[:250].plot()
+wa.plot()
 plt.show()
 
