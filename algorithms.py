@@ -52,9 +52,10 @@ class GradientDecent:
         gradient = np.matmul(self.A.T, np.matmul(self.A, x) - self.b)
         return gradient
 
-    def first_order_stochastic_oracle(self, x):
-        i = np.random.random_integers(low=0, high=self.m-1, size=1)
-        gradient = np.matmul(np.matmul(self.A[i], x) - self.b[i], self.A[i])*self.m
+    def first_order_stochastic_oracle(self, x, i=None):
+        if i is None:
+            i = np.random.random_integers(low=0, high=self.m-1, size=1)
+        gradient = np.matmul(np.matmul(self.A[i], x) - self.b[i], self.A[i]) * self.m
         stochastic_gradient = gradient + np.random.normal(loc=0, scale=1, size=self.d)
         return stochastic_gradient
 
@@ -101,7 +102,7 @@ class SGD(GradientDecent):
         return next_x
 
     def weighted_avg(self, x):
-        weighted_avg_vec = []
+        weighted_avg_vec = [0]
         for i in range(1, len(x)):
             partial_x = x[:i]
             weighted_avg = np.zeros(self.d)
@@ -109,6 +110,38 @@ class SGD(GradientDecent):
                 weighted_avg += 2*(s+1)*x_s/float(i*(i+1))
             weighted_avg_vec.append(self.zero_order_oracle(weighted_avg))
         return weighted_avg_vec
+
+
+class SVGR(GradientDecent):
+    def __init__(self, A: np.ndarray, b: np.array, x_1: np.array, epsilon: float, sigma_min: float,
+                 sigma_max: int, inner_iter: int):
+        self.sigma_min = sigma_min
+        self.alpha = self.sigma_min**2
+        self.beta = sigma_max**2
+        self.inner_iter = inner_iter
+        self.step_size = self.step_size()
+        super().__init__(A, b, x_1, epsilon)
+
+    def step_size(self):
+        return float(1)/(10*self.beta)
+
+    def compute_next_x(self, x):
+        average_gradeient = self.calc_avg_gradient(x)
+        next_inner_x = x
+        for t in range(self.inner_iter):
+            i = np.random.random_integers(low=0, high=self.m-1, size=1)
+            update = self.step_size * (self.first_order_stochastic_oracle(next_inner_x, i) -
+                                       self.first_order_stochastic_oracle(x, i) +
+                                       average_gradeient)
+            next_inner_x = np.subtract(next_inner_x, update)
+        return next_inner_x
+
+    def calc_avg_gradient(self, x):
+        average_gradient = np.zeros(self.d)
+        for i in range(self.m):
+            average_gradient = np.add(average_gradient, self.first_order_stochastic_oracle(x))
+        average_gradient /= self.m
+        return average_gradient
 
 
 class MiniBatchSGD(SGD):
@@ -129,7 +162,7 @@ class MiniBatchSGD(SGD):
         return next_x
 
     def weighted_avg(self, x):
-        weighted_avg_vec = []
+        weighted_avg_vec = [0]
         for i in range(1, len(x)):
             partial_x = x[:i]
             weighted_avg = np.zeros(self.d)
